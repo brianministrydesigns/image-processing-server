@@ -28,7 +28,12 @@
         background-color: #45a049;
       }
       #result {
-        margin-top: 20px;
+        margin-top: 4rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      #result__link {
         word-wrap: break-word;
       }
     </style>
@@ -47,12 +52,15 @@
         <br />
         <button type="submit">Upload File</button>
       </form>
-      <div id="result"></div>
+      <div id="result">
+        <div id="result__link"></div>
+      </div>
     </div>
 
     <script>
       const form = document.getElementById("uploadForm");
       const resultDiv = document.getElementById("result");
+      const resultLink = document.getElementById("result__link");
 
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -80,7 +88,11 @@
           }
 
           const data = await response.json();
-          resultDiv.innerHTML = `File uploaded successfully! URL: <a href="${data.url}" target="_blank">${data.url}</a>`;
+          resultDiv.innerHTML = "";
+          resultLink.innerHTML = `File uploaded successfully! URL: <a href="${data.url}" target="_blank">${data.url}</a>`;
+          const img = document.createElement("img");
+          img.src = data.url;
+          resultDiv.appendChild(img);
         } catch (error) {
           resultDiv.innerHTML = `Error: ${error.message}`;
         }

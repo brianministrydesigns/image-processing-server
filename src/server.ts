@@ -89,8 +89,8 @@ app.post(
   }
 );
 
-app.get("/upload", (_: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, "../public/upload.html"));
+app.get("/uploadTester", (_: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, "../public/uploadTester.html"));
 });
 
 // Start the server
