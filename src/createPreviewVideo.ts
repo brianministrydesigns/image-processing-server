@@ -5,7 +5,7 @@ import { Readable, PassThrough } from "stream";
 export const createPreviewVideo = async (
   inputVideoBuffer: Buffer
 ): Promise<Buffer> => {
-  const inputImagePath = path.join(__dirname, "watermark.png");
+  const watermarkPath = path.join(__dirname, "..", "public", "watermark.png");
 
   if (!inputVideoBuffer) {
     throw new Error("Invalid input video buffer");
@@ -24,7 +24,7 @@ export const createPreviewVideo = async (
 
   return new Promise((resolve, reject) => {
     ffmpeg(inputVideoStream)
-      .input(inputImagePath)
+      .input(watermarkPath)
       .complexFilter([
         {
           filter: "overlay",

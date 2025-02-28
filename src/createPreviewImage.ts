@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import path from "path";
 
 export async function createPreviewImage(inputBuffer: Buffer): Promise<Buffer> {
   const width = 1920;
@@ -14,8 +15,8 @@ export async function createPreviewImage(inputBuffer: Buffer): Promise<Buffer> {
     })
     .webp({ quality: 80 });
 
-  // Load and resize the watermark
-  const watermark = sharp("watermark.png").resize({ width: 200 }).png();
+  const watermarkPath = path.join(__dirname, "..", "public", "watermark.png");
+  const watermark = sharp(watermarkPath).resize({ width: 200 }).png();
 
   // Get the buffers for the image and watermark
   const [imageBuffer, watermarkBuffer] = await Promise.all([
