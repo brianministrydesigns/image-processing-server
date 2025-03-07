@@ -3,7 +3,7 @@ import path from "path";
 
 export async function createPreviewImage(inputBuffer: Buffer): Promise<Buffer> {
   const width = 1920;
-  const height = Math.round((width * 9) / 16);
+  const height = 1080;
 
   // Resize the image and convert to webp with transparency preserved
   const image = sharp(inputBuffer)

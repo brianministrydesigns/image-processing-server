@@ -3,100 +3,102 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>File Upload Test</title>
+    <title>Multiple File Upload</title>
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-        text-align: center;
+      .file-status {
+        margin-top: 10px;
       }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
+      .file-status.success {
+        color: green;
       }
-      input[type="file"] {
-        margin: 10px 0;
+      .file-status.error {
+        color: red;
       }
-      button {
-        padding: 10px 20px;
-        background-color: #4caf50;
-        color: white;
-        border: none;
-        cursor: pointer;
+      .file-status.processing {
+        color: orange;
       }
-      button:hover {
-        background-color: #45a049;
+      .file-item {
+        margin-bottom: 15px;
       }
-      #result {
-        margin-top: 4rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
+      .file-item span {
+        margin-left: 10px;
       }
-      #result__link {
-        word-wrap: break-word;
+      .file-item img {
+        display: block;
+        margin-top: 10px;
+        max-width: 100%;
+        height: auto;
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>File Upload Test</h1>
-      <form id="uploadForm" enctype="multipart/form-data">
-        <input
-          type="file"
-          id="fileInput"
-          name="file"
-          accept="image/*,video/*"
-          required
-        />
-        <br />
-        <button type="submit">Upload File</button>
-      </form>
-      <div id="result">
-        <div id="result__link"></div>
-      </div>
-    </div>
+    <h2>Upload Multiple Files</h2>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+      <input type="file" name="files" multiple />
+      <button type="submit">Upload Files</button>
+    </form>
+
+    <div id="statusContainer"></div>
 
     <script>
-      const form = document.getElementById("uploadForm");
-      const resultDiv = document.getElementById("result");
-      const resultLink = document.getElementById("result__link");
+      document
+        .getElementById("uploadForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+          const formData = new FormData(event.target);
+          const files = formData.getAll("files");
+          const statusContainer = document.getElementById("statusContainer");
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
+          // Clear previous statuses
+          statusContainer.innerHTML = "";
 
-        const fileInput = document.getElementById("fileInput");
-        const file = fileInput.files[0];
-        if (!file) {
-          resultDiv.innerHTML = "Please select a file.";
-          return;
-        }
+          // Process each file
+          files.forEach((file) => {
+            const fileItem = document.createElement("div");
+            fileItem.classList.add("file-item");
+            fileItem.innerHTML = `
+        <strong>${file.name}</strong> 
+        <span class="file-status processing">Processing...</span>
+      `;
+            statusContainer.appendChild(fileItem);
 
+            // Upload the file
+            uploadFile(file, fileItem);
+          });
+        });
+
+      function uploadFile(file, fileItem) {
         const formData = new FormData();
         formData.append("file", file);
 
-        try {
-          resultDiv.innerHTML = "Uploading...";
-
-          const response = await fetch("http://localhost:3000/createPreview", {
-            method: "POST",
-            body: formData,
+        fetch("/createPreview", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((result) => {
+            const statusElement = fileItem.querySelector(".file-status");
+            if (result.url) {
+              statusElement.textContent = "Completed";
+              statusElement.classList.remove("processing");
+              statusElement.classList.add("success");
+              fileItem.innerHTML += `<br><a href="${result.url}" target="_blank">View Uploaded File</a>`;
+              fileItem.innerHTML += `<br><img src="${result.url}" alt="Uploaded Image">`;
+            } else {
+              statusElement.textContent =
+                "Failed: " + (result.error || "Unknown error");
+              statusElement.classList.remove("processing");
+              statusElement.classList.add("error");
+            }
+          })
+          .catch((error) => {
+            const statusElement = fileItem.querySelector(".file-status");
+            statusElement.textContent = "Failed: " + error.message;
+            statusElement.classList.remove("processing");
+            statusElement.classList.add("error");
           });
-
-          if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-          }
-
-          const data = await response.json();
-          resultDiv.innerHTML = "";
-          resultLink.innerHTML = `File uploaded successfully! URL: <a href="${data.url}" target="_blank">${data.url}</a>`;
-          const img = document.createElement("img");
-          img.src = data.url;
-          resultDiv.appendChild(img);
-        } catch (error) {
-          resultDiv.innerHTML = `Error: ${error.message}`;
-        }
-      });
+      }
     </script>
   </body>
 </html>
