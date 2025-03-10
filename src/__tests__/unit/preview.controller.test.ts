@@ -3,7 +3,7 @@ import { Readable } from 'stream';
 import { createPreview } from '../../controllers/preview.controller';
 import { createPreviewImage } from '../../services/image.service';
 import { createPreviewVideo } from '../../services/video.service';
-import { uploadFile } from '../../services/storage.service';
+import { uploadFile, storeOriginalFile } from '../../services/storage.service';
 import { logger } from '../../utils/logger';
 
 jest.mock('../../services/image.service');
@@ -42,6 +42,15 @@ describe('Preview Controller', () => {
 
     (uploadFile as jest.Mock).mockResolvedValue({
       url: 'https://test-bucket.wasabisys.com/test-file.webp',
+      key: 'test-file.webp',
+    });
+
+    (storeOriginalFile as jest.Mock).mockResolvedValue({
+      fileId: 'test-file-id',
+      result: {
+        url: 'https://test-bucket.wasabisys.com/originals/test-file-id.jpg',
+        key: 'originals/test-file-id.jpg',
+      },
     });
   });
 
@@ -79,11 +88,17 @@ describe('Preview Controller', () => {
 
     await createPreview(mockRequest as Request, mockResponse as Response);
 
+    expect(storeOriginalFile).toHaveBeenCalledWith(
+      mockRequest.file?.buffer,
+      mockRequest.file?.originalname,
+      mockRequest.file?.mimetype,
+    );
     expect(createPreviewImage).toHaveBeenCalledWith(mockRequest.file?.buffer);
     expect(uploadFile).toHaveBeenCalled();
     expect(mockResponse.status).toHaveBeenCalledWith(200);
     expect(responseObject).toEqual({
       url: 'https://test-bucket.wasabisys.com/test-file.webp',
+      fileId: 'test-file-id',
     });
   });
 
@@ -109,11 +124,17 @@ describe('Preview Controller', () => {
 
     await createPreview(mockRequest as Request, mockResponse as Response);
 
+    expect(storeOriginalFile).toHaveBeenCalledWith(
+      mockRequest.file?.buffer,
+      mockRequest.file?.originalname,
+      mockRequest.file?.mimetype,
+    );
     expect(createPreviewVideo).toHaveBeenCalledWith(mockRequest.file?.buffer);
     expect(uploadFile).toHaveBeenCalled();
     expect(mockResponse.status).toHaveBeenCalledWith(200);
     expect(responseObject).toEqual({
       url: 'https://test-bucket.wasabisys.com/test-file.webp',
+      fileId: 'test-file-id',
     });
   });
 
@@ -139,11 +160,16 @@ describe('Preview Controller', () => {
 
     await createPreview(mockRequest as Request, mockResponse as Response);
 
+    expect(storeOriginalFile).toHaveBeenCalledWith(
+      mockRequest.file?.buffer,
+      mockRequest.file?.originalname,
+      mockRequest.file?.mimetype,
+    );
     expect(mockResponse.status).toHaveBeenCalledWith(400);
     expect(responseObject).toEqual({ message: 'Unsupported file type' });
   });
 
-  it('should handle errors and return 500', async () => {
+  it('should handle processing errors and return 500 with retry info', async () => {
     const mockStream = new Readable();
     mockStream.push(Buffer.from('test-image-data'));
     mockStream.push(null);
@@ -165,6 +191,46 @@ describe('Preview Controller', () => {
 
     const error = new Error('Test error');
     (createPreviewImage as jest.Mock).mockRejectedValue(error);
+
+    await createPreview(mockRequest as Request, mockResponse as Response);
+
+    expect(storeOriginalFile).toHaveBeenCalledWith(
+      mockRequest.file?.buffer,
+      mockRequest.file?.originalname,
+      mockRequest.file?.mimetype,
+    );
+    expect(mockResponse.status).toHaveBeenCalledWith(500);
+    expect(responseObject).toEqual({
+      message: 'Error processing file',
+      fileId: 'test-file-id',
+      error: 'Test error',
+      canRetry: true,
+    });
+    expect(logger.error).toHaveBeenCalledWith({ error }, 'Error processing file');
+  });
+
+  it('should handle general errors and return 500', async () => {
+    const mockStream = new Readable();
+    mockStream.push(Buffer.from('test-image-data'));
+    mockStream.push(null);
+
+    mockRequest = {
+      file: {
+        buffer: Buffer.from('test-image-data'),
+        originalname: 'test-image.jpg',
+        mimetype: 'image/jpeg',
+        fieldname: 'file',
+        encoding: '7bit',
+        size: 1024,
+        stream: mockStream,
+        destination: '/tmp',
+        filename: 'test-image.jpg',
+        path: '/tmp/test-image.jpg',
+      },
+    };
+
+    const error = new Error('Test error');
+    (storeOriginalFile as jest.Mock).mockRejectedValue(error);
 
     await createPreview(mockRequest as Request, mockResponse as Response);
 

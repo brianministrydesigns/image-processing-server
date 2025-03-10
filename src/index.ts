@@ -18,14 +18,31 @@ try {
 const app = express();
 const port = config.server.port;
 
+// Configure CORS for development
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+  );
+  next();
+});
+
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', '*.wasabisys.com'],
+        imgSrc: ["'self'", 'data:', '*.wasabisys.com', '*.amazonaws.com', 's3.*', '*'],
+        mediaSrc: ["'self'", '*.wasabisys.com', '*.amazonaws.com', 's3.*', '*'],
+        connectSrc: ["'self'", '*.wasabisys.com', '*.amazonaws.com', 's3.*', '*'],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrcElem: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
       },
     },
+    crossOriginEmbedderPolicy: false,
   }),
 );
 
