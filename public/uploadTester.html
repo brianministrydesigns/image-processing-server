@@ -101,9 +101,11 @@
       }
       .preview-video {
         max-width: 100%;
+        width: 100%;
         border: 1px solid #ddd;
         border-radius: 4px;
         padding: 5px;
+        margin-top: 10px;
       }
       .file-links {
         margin-top: 10px;
@@ -125,52 +127,6 @@
         background-color: #eee;
         padding: 2px 5px;
         border-radius: 3px;
-      }
-      .video-container {
-        position: relative;
-        margin-top: 10px;
-      }
-      .video-thumbnail {
-        max-width: 100%;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 5px;
-      }
-      .play-button {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 60px;
-        height: 60px;
-        background-color: rgba(0, 0, 0, 0.7);
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-      }
-      .play-button:after {
-        content: '';
-        display: block;
-        width: 0;
-        height: 0;
-        border-top: 15px solid transparent;
-        border-bottom: 15px solid transparent;
-        border-left: 25px solid white;
-        margin-left: 5px;
-      }
-      .custom-video-player {
-        position: relative;
-        width: 100%;
-        max-width: 100%;
-        margin-top: 10px;
-        overflow: hidden;
-      }
-      .custom-video-player video {
-        width: 100%;
-        border: 1px solid #ddd;
-        border-radius: 4px;
       }
       .processing-note {
         background-color: #fff3cd;
@@ -249,12 +205,12 @@
       
       // Add this function at the beginning of the script section, before any event handlers
       function createVideoPlayer(url, fileInfoDiv, fileItem, hasProcessingNote) {
-        const playerContainer = document.createElement("div");
-        playerContainer.className = "custom-video-player";
-        
         const video = document.createElement("video");
         video.controls = true;
         video.className = "preview-video";
+        video.style.width = "100%";
+        video.style.maxWidth = "100%";
+        video.style.marginTop = "10px";
         
         const source = document.createElement("source");
         source.src = url;
@@ -263,8 +219,7 @@
         video.appendChild(source);
         video.onerror = () => fileInfoDiv.innerHTML += `<p class="error">Error loading video. <a href="${url}" target="_blank">Try direct link</a></p>`;
         
-        playerContainer.appendChild(video);
-        fileItem.appendChild(playerContainer);
+        fileItem.appendChild(video);
         
         if (hasProcessingNote) {
           const noteDiv = document.createElement("div");
@@ -273,7 +228,7 @@
           fileItem.appendChild(noteDiv);
         }
         
-        return playerContainer;
+        return video;
       }
 
       function handleFullscreenChange() {}
@@ -519,8 +474,8 @@
               }
               
               if (result.url.match(/\.(mp4|webm|ogg)$/i)) {
-                const existingPlayer = fileItem.querySelector(".custom-video-player");
-                if (existingPlayer) fileItem.removeChild(existingPlayer);
+                const existingVideo = fileItem.querySelector("video");
+                if (existingVideo) fileItem.removeChild(existingVideo);
                 createVideoPlayer(result.url, fileInfoDiv, fileItem);
               }
             } else {
