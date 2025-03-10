@@ -18,26 +18,38 @@ try {
 const app = express();
 const port = config.server.port;
 
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+  );
+  next();
+});
+
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', '*.wasabisys.com'],
+        imgSrc: ["'self'", 'data:', '*.wasabisys.com', '*.amazonaws.com', 's3.*', '*'],
+        mediaSrc: ["'self'", '*.wasabisys.com', '*.amazonaws.com', 's3.*', '*'],
+        connectSrc: ["'self'", '*.wasabisys.com', '*.amazonaws.com', 's3.*', '*'],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrcElem: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
       },
     },
+    crossOriginEmbedderPolicy: false,
   }),
 );
 
 app.use(pinoHttp({ logger }));
-
 app.use(express.json());
-
 app.use(express.static(path.join(process.cwd(), 'public')));
-
 app.use(previewRoutes);
 app.use(staticRoutes);
-
 app.use(errorHandler);
 
 app.listen(port, () => {

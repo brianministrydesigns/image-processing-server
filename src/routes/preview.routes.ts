@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { createPreview } from '../controllers/preview.controller';
+import {
+  createPreview,
+  createImagePreview,
+  createVideoPreview,
+  retryProcessing,
+} from '../controllers/preview.controller';
 
 const router = Router();
 
@@ -12,6 +17,14 @@ const upload = multer({
   },
 });
 
+// Legacy endpoint for backward compatibility
 router.post('/createPreview', upload.single('file'), createPreview);
+
+// New specific endpoints
+router.post('/image', upload.single('file'), createImagePreview);
+router.post('/video', upload.single('file'), createVideoPreview);
+
+// Retry processing endpoint
+router.post('/retry', retryProcessing);
 
 export default router;

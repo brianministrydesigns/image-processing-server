@@ -3,8 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Multiple File Upload</title>
+    <title>File Upload Tester</title>
     <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+      .upload-section {
+        flex: 1;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+      }
+      h2 {
+        margin-top: 0;
+      }
       .file-status {
         margin-top: 10px;
       }
@@ -19,6 +39,9 @@
       }
       .file-item {
         margin-bottom: 15px;
+        border: 1px solid #eee;
+        padding: 10px;
+        border-radius: 5px;
       }
       .file-item span {
         margin-left: 10px;
@@ -29,76 +52,503 @@
         max-width: 100%;
         height: auto;
       }
+      .file-item video {
+        display: block;
+        margin-top: 10px;
+        max-width: 100%;
+        height: auto;
+      }
+      .retry-section {
+        margin-top: 30px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+      }
+      button {
+        padding: 8px 16px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      input[type="file"] {
+        margin-bottom: 10px;
+      }
+      input[type="text"] {
+        padding: 8px;
+        margin-right: 10px;
+        width: 250px;
+      }
+      .debug-info {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #f5f5f5;
+        border-radius: 5px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .preview-image {
+        max-width: 100%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px;
+      }
+      .preview-video {
+        max-width: 100%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px;
+      }
+      .file-links {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f9f9f9;
+        border-radius: 4px;
+      }
+      .file-links a {
+        display: block;
+        margin-bottom: 5px;
+        color: #0066cc;
+        text-decoration: none;
+      }
+      .file-links a:hover {
+        text-decoration: underline;
+      }
+      .file-id {
+        font-family: monospace;
+        background-color: #eee;
+        padding: 2px 5px;
+        border-radius: 3px;
+      }
+      .video-container {
+        position: relative;
+        margin-top: 10px;
+      }
+      .video-thumbnail {
+        max-width: 100%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px;
+      }
+      .play-button {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 60px;
+        height: 60px;
+        background-color: rgba(0, 0, 0, 0.7);
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+      }
+      .play-button:after {
+        content: '';
+        display: block;
+        width: 0;
+        height: 0;
+        border-top: 15px solid transparent;
+        border-bottom: 15px solid transparent;
+        border-left: 25px solid white;
+        margin-left: 5px;
+      }
+      .custom-video-player {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        margin-top: 10px;
+        overflow: hidden;
+      }
+      .custom-video-player video {
+        width: 100%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .processing-note {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 15px;
+        margin-top: 15px;
+        border-radius: 4px;
+        border: 1px solid #ffeeba;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .processing-note.warning {
+        background-color: #f8d7da;
+        color: #721c24;
+        border-color: #f5c6cb;
+      }
+      .processing-note h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+      .processing-note code {
+        background-color: rgba(0,0,0,0.1);
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-family: monospace;
+      }
     </style>
   </head>
   <body>
-    <h2>Upload Multiple Files</h2>
-
-    <form id="uploadForm" enctype="multipart/form-data">
-      <input type="file" name="files" multiple />
-      <button type="submit">Upload Files</button>
-    </form>
-
-    <div id="statusContainer"></div>
+    <h1>File Upload Tester</h1>
+    
+    <div class="container">
+      <div class="upload-section">
+        <h2>Upload Image</h2>
+        <form id="imageUploadForm" method="post" enctype="multipart/form-data">
+          <input type="file" name="file" accept="image/*" />
+          <button type="submit">Upload Image</button>
+        </form>
+        <div id="imageStatusContainer"></div>
+      </div>
+      
+      <div class="upload-section">
+        <h2>Upload Video</h2>
+        <form id="videoUploadForm" method="post" enctype="multipart/form-data">
+          <input type="file" name="file" accept="video/*" />
+          <button type="submit">Upload Video</button>
+        </form>
+        <div id="videoStatusContainer"></div>
+      </div>
+    </div>
+    
+    <div class="upload-section">
+      <h2>Multiple Files Upload</h2>
+      <form id="multipleUploadForm" method="post" enctype="multipart/form-data">
+        <input type="file" name="files" multiple />
+        <button type="submit">Upload Files</button>
+      </form>
+      <div id="multipleStatusContainer"></div>
+    </div>
+    
+    <div class="retry-section">
+      <h2>Retry Processing</h2>
+      <form id="retryForm" method="post">
+        <input type="text" id="fileId" placeholder="Enter File ID to retry" />
+        <button type="submit">Retry Processing</button>
+      </form>
+      <button id="retryAllFailed" style="margin-top: 10px; background-color: #f44336; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Retry All Failed</button>
+      <div id="retryStatusContainer"></div>
+    </div>
+    
+    <div class="debug-info" id="debugInfo"></div>
 
     <script>
-      document
-        .getElementById("uploadForm")
-        .addEventListener("submit", function (event) {
-          event.preventDefault();
-          const formData = new FormData(event.target);
-          const files = formData.getAll("files");
-          const statusContainer = document.getElementById("statusContainer");
+      // Track failed uploads
+      const failedUploads = [];
+      
+      // Add this function at the beginning of the script section, before any event handlers
+      function createVideoPlayer(url, fileInfoDiv, fileItem, hasProcessingNote) {
+        const playerContainer = document.createElement("div");
+        playerContainer.className = "custom-video-player";
+        
+        const video = document.createElement("video");
+        video.controls = true;
+        video.className = "preview-video";
+        
+        const source = document.createElement("source");
+        source.src = url;
+        source.type = "video/mp4";
+        
+        video.appendChild(source);
+        video.onerror = () => fileInfoDiv.innerHTML += `<p class="error">Error loading video. <a href="${url}" target="_blank">Try direct link</a></p>`;
+        
+        playerContainer.appendChild(video);
+        fileItem.appendChild(playerContainer);
+        
+        if (hasProcessingNote) {
+          const noteDiv = document.createElement("div");
+          noteDiv.className = "processing-note";
+          noteDiv.innerHTML = `<h3>Processing Note</h3><p>${hasProcessingNote}</p>`;
+          fileItem.appendChild(noteDiv);
+        }
+        
+        return playerContainer;
+      }
 
-          // Clear previous statuses
-          statusContainer.innerHTML = "";
+      function handleFullscreenChange() {}
 
-          // Process each file
-          files.forEach((file) => {
-            const fileItem = document.createElement("div");
-            fileItem.classList.add("file-item");
-            fileItem.innerHTML = `
-        <strong>${file.name}</strong> 
-        <span class="file-status processing">Processing...</span>
-      `;
-            statusContainer.appendChild(fileItem);
-
-            // Upload the file
-            uploadFile(file, fileItem);
-          });
+      document.getElementById("imageUploadForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const file = formData.get("file");
+        if (!file || file.size === 0) {
+          alert("Please select an image file to upload");
+          return;
+        }
+        
+        const statusContainer = document.getElementById("imageStatusContainer");
+        statusContainer.innerHTML = "";
+        
+        const fileItem = createFileItem(file.name);
+        statusContainer.appendChild(fileItem);
+        
+        uploadFile(file, fileItem, "/image", "image");
+      });
+      
+      // Video upload handler
+      document.getElementById("videoUploadForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const file = formData.get("file");
+        if (!file || file.size === 0) {
+          alert("Please select a video file to upload");
+          return;
+        }
+        
+        const statusContainer = document.getElementById("videoStatusContainer");
+        statusContainer.innerHTML = "";
+        
+        const fileItem = createFileItem(file.name);
+        statusContainer.appendChild(fileItem);
+        
+        uploadFile(file, fileItem, "/video", "video");
+      });
+      
+      // Multiple files upload handler
+      document.getElementById("multipleUploadForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const fileInput = event.target.querySelector('input[type="file"]');
+        const files = fileInput.files;
+        
+        if (!files || files.length === 0) {
+          alert("Please select at least one file to upload");
+          return;
+        }
+        
+        const statusContainer = document.getElementById("multipleStatusContainer");
+        statusContainer.innerHTML = "";
+        
+        Array.from(files).forEach(file => {
+          const fileItem = createFileItem(file.name);
+          statusContainer.appendChild(fileItem);
+          
+          let endpoint = "/createPreview";
+          let fileType = getFileType(file.type);
+          
+          if (fileType === "image") endpoint = "/image";
+          else if (fileType === "video") endpoint = "/video";
+          
+          uploadFile(file, fileItem, endpoint, fileType);
         });
+      });
+      
+      // Retry form handler
+      document.getElementById("retryForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+        const fileId = document.getElementById("fileId").value.trim();
+        if (!fileId) {
+          alert("Please enter a file ID");
+          return;
+        }
+        
+        const statusContainer = document.getElementById("retryStatusContainer");
+        statusContainer.innerHTML = "";
+        
+        const fileItem = document.createElement("div");
+        fileItem.classList.add("file-item");
+        fileItem.innerHTML = `
+          <strong>Retrying file ID: ${fileId}</strong> 
+          <span class="file-status processing">Processing...</span>
+        `;
+        statusContainer.appendChild(fileItem);
+        
+        retryProcessing(fileId, fileItem);
+      });
+      
+      function createFileItem(fileName) {
+        const fileItem = document.createElement("div");
+        fileItem.classList.add("file-item");
+        fileItem.innerHTML = `
+          <strong>${fileName}</strong> 
+          <span class="file-status processing">Processing...</span>
+        `;
+        return fileItem;
+      }
+      
+      function getFileType(mimeType) {
+        if (mimeType.startsWith("image/")) return "image";
+        if (mimeType.startsWith("video/")) return "video";
+        return "unknown";
+      }
 
-      function uploadFile(file, fileItem) {
+      function uploadFile(file, fileItem, endpoint, fileType) {
         const formData = new FormData();
         formData.append("file", file);
 
-        fetch("/createPreview", {
+        document.getElementById("debugInfo").textContent = `Sending ${fileType} to ${endpoint}...`;
+
+        fetch(endpoint, {
           method: "POST",
           body: formData,
         })
-          .then((response) => response.json())
-          .then((result) => {
-            const statusElement = fileItem.querySelector(".file-status");
-            if (result.url) {
-              statusElement.textContent = "Completed";
-              statusElement.classList.remove("processing");
-              statusElement.classList.add("success");
-              fileItem.innerHTML += `<br><a href="${result.url}" target="_blank">View Uploaded File</a>`;
-              fileItem.innerHTML += `<br><img src="${result.url}" alt="Uploaded Image">`;
-            } else {
-              statusElement.textContent =
-                "Failed: " + (result.error || "Unknown error");
-              statusElement.classList.remove("processing");
-              statusElement.classList.add("error");
-            }
+          .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            return response.json();
           })
-          .catch((error) => {
+          .then(result => handleUploadResponse(result, fileItem))
+          .catch(error => {
+            console.error("Upload error:", error);
+            document.getElementById("debugInfo").textContent = "Error: " + error.message;
+            
             const statusElement = fileItem.querySelector(".file-status");
             statusElement.textContent = "Failed: " + error.message;
             statusElement.classList.remove("processing");
             statusElement.classList.add("error");
           });
       }
+      
+      function handleUploadResponse(result, fileItem) {
+        console.log("Upload result:", result);
+        document.getElementById("debugInfo").textContent = "Last response: " + JSON.stringify(result, null, 2);
+        
+        const statusElement = fileItem.querySelector(".file-status");
+        if (result.url) {
+          statusElement.textContent = "Success";
+          statusElement.classList.remove("processing");
+          statusElement.classList.add("success");
+          
+          const fileInfoDiv = document.createElement("div");
+          fileInfoDiv.className = "file-links";
+          fileInfoDiv.innerHTML = `<a href="${result.url}" target="_blank">View Processed File</a>`;
+          if (result.originalUrl) {
+            fileInfoDiv.innerHTML += `<a href="${result.originalUrl}" target="_blank">View Original File</a>`;
+          }
+          fileItem.appendChild(fileInfoDiv);
+          
+          if (result.url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+            const img = document.createElement("img");
+            img.src = result.url;
+            img.className = "preview-image";
+            fileItem.appendChild(img);
+          }
+          
+          if (result.url.match(/\.(mp4|webm|ogg)$/i)) {
+            createVideoPlayer(result.url, fileInfoDiv, fileItem, result.processingNote);
+          }
+        } else {
+          statusElement.textContent = "Failed: " + (result.error || "Unknown error");
+          statusElement.classList.remove("processing");
+          statusElement.classList.add("error");
+          
+          if (result.fileId && result.canRetry) {
+            failedUploads.push({
+              fileId: result.fileId,
+              fileItem: fileItem,
+              error: result.error || "Unknown error"
+            });
+            
+            const fileInfoDiv = document.createElement("div");
+            fileInfoDiv.className = "file-links";
+            fileInfoDiv.innerHTML = `<p>File ID for retry: <span class="file-id">${result.fileId}</span></p>`;
+            if (result.originalUrl) {
+              fileInfoDiv.innerHTML += `<a href="${result.originalUrl}" target="_blank">View Original File</a>`;
+            }
+            
+            const retryButton = document.createElement("button");
+            retryButton.textContent = "Retry";
+            retryButton.style.marginTop = "10px";
+            retryButton.style.padding = "5px 10px";
+            retryButton.style.backgroundColor = "#4CAF50";
+            retryButton.style.color = "white";
+            retryButton.style.border = "none";
+            retryButton.style.borderRadius = "4px";
+            retryButton.style.cursor = "pointer";
+            retryButton.addEventListener("click", () => retryProcessing(result.fileId, fileItem));
+            fileInfoDiv.appendChild(retryButton);
+            
+            fileItem.appendChild(fileInfoDiv);
+          }
+        }
+      }
+      
+      function retryProcessing(fileId, fileItem) {
+        document.getElementById("debugInfo").textContent = `Sending retry request for ${fileId}...`;
+
+        fetch("/retry", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileId }),
+        })
+          .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            return response.json();
+          })
+          .then(result => {
+            console.log("Retry result:", result);
+            document.getElementById("debugInfo").textContent = "Last response: " + JSON.stringify(result, null, 2);
+            
+            const statusElement = fileItem.querySelector(".file-status");
+            if (result.url) {
+              statusElement.textContent = "Retry Successful";
+              statusElement.classList.remove("error");
+              statusElement.classList.add("success");
+              
+              const index = failedUploads.findIndex(item => item.fileId === fileId);
+              if (index !== -1) failedUploads.splice(index, 1);
+              
+              const fileInfoDiv = fileItem.querySelector(".file-links");
+              if (fileInfoDiv) {
+                fileInfoDiv.innerHTML = `<a href="${result.url}" target="_blank">View Processed File</a>`;
+                if (result.originalUrl) {
+                  fileInfoDiv.innerHTML += `<a href="${result.originalUrl}" target="_blank">View Original File</a>`;
+                }
+              }
+              
+              if (result.url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                const existingImg = fileItem.querySelector("img:not(.retry-button)");
+                if (existingImg) {
+                  existingImg.src = result.url;
+                } else {
+                  const img = document.createElement("img");
+                  img.src = result.url;
+                  img.className = "preview-image";
+                  fileItem.appendChild(img);
+                }
+              }
+              
+              if (result.url.match(/\.(mp4|webm|ogg)$/i)) {
+                const existingPlayer = fileItem.querySelector(".custom-video-player");
+                if (existingPlayer) fileItem.removeChild(existingPlayer);
+                createVideoPlayer(result.url, fileInfoDiv, fileItem);
+              }
+            } else {
+              statusElement.textContent = "Retry Failed: " + (result.error || "Unknown error");
+            }
+          })
+          .catch(error => {
+            console.error("Retry error:", error);
+            document.getElementById("debugInfo").textContent = "Error: " + error.message;
+            
+            const statusElement = fileItem.querySelector(".file-status");
+            statusElement.textContent = "Retry Failed: " + error.message;
+          });
+      }
+      
+      // Function to retry all failed uploads
+      function retryAllFailed() {
+        if (failedUploads.length === 0) {
+          alert("No failed uploads to retry");
+          return;
+        }
+        
+        document.getElementById("debugInfo").textContent = `Retrying ${failedUploads.length} failed uploads...`;
+        [...failedUploads].forEach(item => retryProcessing(item.fileId, item.fileItem));
+      }
+
+      // Add event listener for the retry all button
+      document.getElementById("retryAllFailed").addEventListener("click", retryAllFailed);
     </script>
   </body>
 </html>
