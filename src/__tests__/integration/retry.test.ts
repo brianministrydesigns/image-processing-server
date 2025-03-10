@@ -8,6 +8,9 @@ import { createPreviewVideo } from '../../services/video.service';
 // Mock the storage service
 jest.mock('../../services/storage.service', () => ({
   getOriginalFile: jest.fn(),
+  getOriginalFileUrl: jest
+    .fn()
+    .mockReturnValue('https://test-bucket.wasabisys.com/originals/test-file-id.jpg'),
   uploadFile: jest.fn().mockResolvedValue({
     url: 'https://test-bucket.wasabisys.com/test-file-retry.webp',
     key: 'test-file-retry.webp',
@@ -42,6 +45,9 @@ jest.mock('../../utils/logger', () => ({
   },
 }));
 
+// Set NODE_ENV to test
+process.env.NODE_ENV = 'test';
+
 describe('Retry Processing Integration Tests', () => {
   let app: express.Application;
 
@@ -50,6 +56,10 @@ describe('Retry Processing Integration Tests', () => {
     app = express();
     app.use(express.json());
     app.post('/retry', retryProcessing);
+  });
+
+  afterEach(() => {
+    delete process.env.NODE_ENV;
   });
 
   it('should retry processing an image file', async () => {

@@ -160,34 +160,6 @@
         border-left: 25px solid white;
         margin-left: 5px;
       }
-      .watermarked-video-container {
-        position: relative;
-        margin-top: 10px;
-        width: 100%;
-      }
-      .video-watermark-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10;
-        background-color: rgba(0, 0, 0, 0.1);
-      }
-      .video-watermark-text {
-        background-color: rgba(0, 0, 0, 0.6);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
-        font-size: 24px;
-        font-weight: bold;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-      }
       .custom-video-player {
         position: relative;
         width: 100%;
@@ -199,17 +171,6 @@
         width: 100%;
         border: 1px solid #ddd;
         border-radius: 4px;
-      }
-      .custom-video-watermark {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 2;
-        pointer-events: none;
-        width: 150px;
-        height: auto;
-        opacity: 0.7;
       }
       .processing-note {
         background-color: #fff3cd;
@@ -235,17 +196,6 @@
         padding: 2px 5px;
         border-radius: 3px;
         font-family: monospace;
-      }
-      .fullscreen-watermark {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 9999;
-        pointer-events: none;
-        width: 200px;
-        height: auto;
-        opacity: 0.7;
       }
     </style>
   </head>
@@ -287,127 +237,47 @@
         <input type="text" id="fileId" placeholder="Enter File ID to retry" />
         <button type="submit">Retry Processing</button>
       </form>
+      <button id="retryAllFailed" style="margin-top: 10px; background-color: #f44336; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Retry All Failed</button>
       <div id="retryStatusContainer"></div>
     </div>
     
     <div class="debug-info" id="debugInfo"></div>
 
     <script>
+      // Track failed uploads
+      const failedUploads = [];
+      
       // Add this function at the beginning of the script section, before any event handlers
       function createVideoPlayer(url, fileInfoDiv, fileItem, hasProcessingNote) {
-        // Create a custom video player container
         const playerContainer = document.createElement("div");
         playerContainer.className = "custom-video-player";
         
-        // Create the video element
         const video = document.createElement("video");
         video.controls = true;
         video.className = "preview-video";
-        video.crossOrigin = "anonymous"; // Enable CORS for the video
         
         const source = document.createElement("source");
         source.src = url;
         source.type = "video/mp4";
         
         video.appendChild(source);
-        video.onerror = function() {
-          fileInfoDiv.innerHTML += `<p class="error">Error loading video. <a href="${url}" target="_blank">Try direct link</a></p>`;
-        };
+        video.onerror = () => fileInfoDiv.innerHTML += `<p class="error">Error loading video. <a href="${url}" target="_blank">Try direct link</a></p>`;
         
-        // Add the video to the container
         playerContainer.appendChild(video);
-        
-        // Create a canvas element that will be used to draw the video and watermark
-        const canvas = document.createElement("canvas");
-        canvas.style.display = "none";
-        playerContainer.appendChild(canvas);
-        
-        // Load the watermark image
-        const watermarkImg = new Image();
-        watermarkImg.src = "/watermark.png"; // Path to your actual watermark
-        watermarkImg.className = "custom-video-watermark";
-        
-        // Add the watermark image as a visible overlay
-        playerContainer.appendChild(watermarkImg);
-        
-        // Handle fullscreen changes
-        video.addEventListener('webkitfullscreenchange', function() {
-          handleFullscreenChange(video, watermarkImg);
-        });
-        video.addEventListener('mozfullscreenchange', function() {
-          handleFullscreenChange(video, watermarkImg);
-        });
-        video.addEventListener('fullscreenchange', function() {
-          handleFullscreenChange(video, watermarkImg);
-        });
-        
-        // Add the player to the file item
         fileItem.appendChild(playerContainer);
         
-        // Display processing note if available
         if (hasProcessingNote) {
           const noteDiv = document.createElement("div");
           noteDiv.className = "processing-note";
-          noteDiv.style.backgroundColor = "#fff3cd";
-          noteDiv.style.color = "#856404";
-          noteDiv.style.padding = "10px";
-          noteDiv.style.marginTop = "10px";
-          noteDiv.style.borderRadius = "4px";
-          noteDiv.style.border = "1px solid #ffeeba";
-          noteDiv.textContent = "Original video returned without embedded watermark - ffmpeg not available";
+          noteDiv.innerHTML = `<h3>Processing Note</h3><p>${hasProcessingNote}</p>`;
           fileItem.appendChild(noteDiv);
         }
         
         return playerContainer;
       }
 
-      // Function to handle fullscreen changes
-      function handleFullscreenChange(video, watermarkImg) {
-        const isFullScreen = document.fullscreenElement || 
-                            document.webkitFullscreenElement || 
-                            document.mozFullScreenElement;
-        
-        // Remove any existing fullscreen watermark
-        const existingWatermark = document.getElementById("fullscreen-watermark");
-        if (existingWatermark) {
-          document.body.removeChild(existingWatermark);
-        }
-        
-        if (isFullScreen) {
-          // Create a new watermark for the fullscreen element
-          const fullscreenWatermark = document.createElement('img');
-          fullscreenWatermark.src = watermarkImg.src;
-          fullscreenWatermark.className = "fullscreen-watermark";
-          fullscreenWatermark.id = "fullscreen-watermark";
-          
-          // Add the watermark to the document body
-          document.body.appendChild(fullscreenWatermark);
-          
-          // Add a listener for when the video exits fullscreen
-          const exitHandler = function() {
-            if (!document.fullscreenElement && 
-                !document.webkitFullscreenElement && 
-                !document.mozFullScreenElement) {
-              const fullscreenWatermark = document.getElementById("fullscreen-watermark");
-              if (fullscreenWatermark) {
-                document.body.removeChild(fullscreenWatermark);
-              }
-              
-              // Remove the event listeners
-              document.removeEventListener('fullscreenchange', exitHandler);
-              document.removeEventListener('webkitfullscreenchange', exitHandler);
-              document.removeEventListener('mozfullscreenchange', exitHandler);
-            }
-          };
-          
-          // Add event listeners for fullscreen change
-          document.addEventListener('fullscreenchange', exitHandler);
-          document.addEventListener('webkitfullscreenchange', exitHandler);
-          document.addEventListener('mozfullscreenchange', exitHandler);
-        }
-      }
+      function handleFullscreenChange() {}
 
-      // Image upload handler
       document.getElementById("imageUploadForm").addEventListener("submit", function (event) {
         event.preventDefault();
         const formData = new FormData(event.target);
@@ -460,20 +330,15 @@
         const statusContainer = document.getElementById("multipleStatusContainer");
         statusContainer.innerHTML = "";
         
-        // Process each file individually
         Array.from(files).forEach(file => {
           const fileItem = createFileItem(file.name);
           statusContainer.appendChild(fileItem);
           
-          // Determine endpoint based on file type
           let endpoint = "/createPreview";
           let fileType = getFileType(file.type);
           
-          if (fileType === "image") {
-            endpoint = "/image";
-          } else if (fileType === "video") {
-            endpoint = "/video";
-          }
+          if (fileType === "image") endpoint = "/image";
+          else if (fileType === "video") endpoint = "/video";
           
           uploadFile(file, fileItem, endpoint, fileType);
         });
@@ -522,137 +387,18 @@
         const formData = new FormData();
         formData.append("file", file);
 
-        // Show that we're sending the request
         document.getElementById("debugInfo").textContent = `Sending ${fileType} to ${endpoint}...`;
 
         fetch(endpoint, {
           method: "POST",
           body: formData,
         })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! Status: ${response.status}`);
-            }
+          .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             return response.json();
           })
-          .then((result) => {
-            // Log the result for debugging
-            console.log("Upload result:", result);
-            document.getElementById("debugInfo").textContent = "Last response: " + JSON.stringify(result, null, 2);
-            
-            const statusElement = fileItem.querySelector(".file-status");
-            if (result.url) {
-              statusElement.textContent = "Completed";
-              statusElement.classList.remove("processing");
-              statusElement.classList.add("success");
-              
-              // Add file info
-              const fileInfoDiv = document.createElement("div");
-              fileInfoDiv.className = "file-links";
-              fileInfoDiv.innerHTML = `
-                <a href="${result.url}" target="_blank">View Preview</a>
-                <a href="${result.originalUrl}" target="_blank">View Original File</a>
-                <p>File ID: <span class="file-id">${result.fileId}</span></p>
-              `;
-              fileItem.appendChild(fileInfoDiv);
-              
-              // Add preview based on file type
-              if (fileType === "image") {
-                const img = document.createElement("img");
-                img.src = result.url;
-                img.alt = "Uploaded Image";
-                img.className = "preview-image";
-                img.onerror = function() {
-                  this.onerror = null;
-                  this.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTkiPkltYWdlIGxvYWQgZXJyb3I8L3RleHQ+PC9zdmc+";
-                  fileInfoDiv.innerHTML += `<p class="error">Error loading image. <a href="${result.url}" target="_blank">Try direct link</a></p>`;
-                };
-                fileItem.appendChild(img);
-              } else if (fileType === "video") {
-                // Check if we have a thumbnail from the server
-                if (result.thumbnailData) {
-                  // Create a container for the video thumbnail and play button
-                  const videoContainer = document.createElement("div");
-                  videoContainer.className = "video-container";
-                  
-                  // Create the thumbnail image
-                  const thumbnailImg = document.createElement("img");
-                  thumbnailImg.src = `data:image/jpeg;base64,${result.thumbnailData}`;
-                  thumbnailImg.alt = "Video Thumbnail";
-                  thumbnailImg.className = "video-thumbnail";
-                  
-                  // Create the play button overlay
-                  const playButton = document.createElement("div");
-                  playButton.className = "play-button";
-                  
-                  // Add click handler to play the video
-                  videoContainer.addEventListener("click", function() {
-                    // Create the video player with our custom function
-                    const playerContainer = createVideoPlayer(result.url, fileInfoDiv, fileItem, result.processingNote);
-                    
-                    // Replace the container with the player
-                    videoContainer.parentNode.replaceChild(playerContainer, videoContainer);
-                    
-                    // Find the video element and play it
-                    const video = playerContainer.querySelector('video');
-                    if (video) {
-                      video.play().catch(e => console.error("Error playing video:", e));
-                    }
-                  });
-                  
-                  // Assemble the container
-                  videoContainer.appendChild(thumbnailImg);
-                  videoContainer.appendChild(playButton);
-                  fileItem.appendChild(videoContainer);
-                  
-                  // Display processing note if available
-                  if (result.processingNote) {
-                    const noteDiv = document.createElement("div");
-                    noteDiv.className = "processing-note warning";
-                    
-                    // Check if the note is about ffmpeg
-                    if (result.processingNote.includes("ffmpeg not available")) {
-                      noteDiv.innerHTML = `
-                        <h3>⚠️ FFmpeg Not Available</h3>
-                        <p>${result.processingNote}</p>
-                        <p><strong>Installation Instructions:</strong></p>
-                        <ul>
-                          <li><strong>macOS:</strong> <code>brew install ffmpeg</code></li>
-                          <li><strong>Ubuntu/Debian:</strong> <code>sudo apt update && sudo apt install ffmpeg</code></li>
-                          <li><strong>Windows:</strong> Download from <a href="https://ffmpeg.org/download.html" target="_blank">ffmpeg.org</a> and add to PATH</li>
-                        </ul>
-                        <p>After installing, restart the server to enable video watermarking.</p>
-                      `;
-                    } else {
-                      noteDiv.textContent = result.processingNote;
-                    }
-                    
-                    fileItem.appendChild(noteDiv);
-                  }
-                } else {
-                  // No thumbnail, just show the video player with our custom function
-                  createVideoPlayer(result.url, fileInfoDiv, fileItem, result.processingNote);
-                }
-              }
-            } else {
-              statusElement.textContent = "Failed: " + (result.error || "Unknown error");
-              statusElement.classList.remove("processing");
-              statusElement.classList.add("error");
-              
-              if (result.fileId && result.canRetry) {
-                const fileInfoDiv = document.createElement("div");
-                fileInfoDiv.className = "file-links";
-                fileInfoDiv.innerHTML = `
-                  <p>File ID for retry: <span class="file-id">${result.fileId}</span></p>
-                `;
-                if (result.originalUrl) {
-                  fileInfoDiv.innerHTML += `<a href="${result.originalUrl}" target="_blank">View Original File</a>`;
-                }
-                fileItem.appendChild(fileInfoDiv);
-              }
-            }
-          })
-          .catch((error) => {
+          .then(result => handleUploadResponse(result, fileItem))
+          .catch(error => {
             console.error("Upload error:", error);
             document.getElementById("debugInfo").textContent = "Error: " + error.message;
             
@@ -663,110 +409,146 @@
           });
       }
       
+      function handleUploadResponse(result, fileItem) {
+        console.log("Upload result:", result);
+        document.getElementById("debugInfo").textContent = "Last response: " + JSON.stringify(result, null, 2);
+        
+        const statusElement = fileItem.querySelector(".file-status");
+        if (result.url) {
+          statusElement.textContent = "Success";
+          statusElement.classList.remove("processing");
+          statusElement.classList.add("success");
+          
+          const fileInfoDiv = document.createElement("div");
+          fileInfoDiv.className = "file-links";
+          fileInfoDiv.innerHTML = `<a href="${result.url}" target="_blank">View Processed File</a>`;
+          if (result.originalUrl) {
+            fileInfoDiv.innerHTML += `<a href="${result.originalUrl}" target="_blank">View Original File</a>`;
+          }
+          fileItem.appendChild(fileInfoDiv);
+          
+          if (result.url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+            const img = document.createElement("img");
+            img.src = result.url;
+            img.className = "preview-image";
+            fileItem.appendChild(img);
+          }
+          
+          if (result.url.match(/\.(mp4|webm|ogg)$/i)) {
+            createVideoPlayer(result.url, fileInfoDiv, fileItem, result.processingNote);
+          }
+        } else {
+          statusElement.textContent = "Failed: " + (result.error || "Unknown error");
+          statusElement.classList.remove("processing");
+          statusElement.classList.add("error");
+          
+          if (result.fileId && result.canRetry) {
+            failedUploads.push({
+              fileId: result.fileId,
+              fileItem: fileItem,
+              error: result.error || "Unknown error"
+            });
+            
+            const fileInfoDiv = document.createElement("div");
+            fileInfoDiv.className = "file-links";
+            fileInfoDiv.innerHTML = `<p>File ID for retry: <span class="file-id">${result.fileId}</span></p>`;
+            if (result.originalUrl) {
+              fileInfoDiv.innerHTML += `<a href="${result.originalUrl}" target="_blank">View Original File</a>`;
+            }
+            
+            const retryButton = document.createElement("button");
+            retryButton.textContent = "Retry";
+            retryButton.style.marginTop = "10px";
+            retryButton.style.padding = "5px 10px";
+            retryButton.style.backgroundColor = "#4CAF50";
+            retryButton.style.color = "white";
+            retryButton.style.border = "none";
+            retryButton.style.borderRadius = "4px";
+            retryButton.style.cursor = "pointer";
+            retryButton.addEventListener("click", () => retryProcessing(result.fileId, fileItem));
+            fileInfoDiv.appendChild(retryButton);
+            
+            fileItem.appendChild(fileInfoDiv);
+          }
+        }
+      }
+      
       function retryProcessing(fileId, fileItem) {
-        // Show that we're sending the request
         document.getElementById("debugInfo").textContent = `Sending retry request for ${fileId}...`;
 
         fetch("/retry", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ fileId }),
         })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! Status: ${response.status}`);
-            }
+          .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             return response.json();
           })
-          .then((result) => {
-            // Log the result for debugging
+          .then(result => {
             console.log("Retry result:", result);
             document.getElementById("debugInfo").textContent = "Last response: " + JSON.stringify(result, null, 2);
             
             const statusElement = fileItem.querySelector(".file-status");
             if (result.url) {
               statusElement.textContent = "Retry Successful";
-              statusElement.classList.remove("processing");
+              statusElement.classList.remove("error");
               statusElement.classList.add("success");
               
-              // Add file info
-              const fileInfoDiv = document.createElement("div");
-              fileInfoDiv.className = "file-links";
-              fileInfoDiv.innerHTML = `
-                <a href="${result.url}" target="_blank">View Preview</a>
-                <a href="${result.originalUrl}" target="_blank">View Original File</a>
-                <p>File ID: <span class="file-id">${result.fileId}</span></p>
-              `;
-              fileItem.appendChild(fileInfoDiv);
+              const index = failedUploads.findIndex(item => item.fileId === fileId);
+              if (index !== -1) failedUploads.splice(index, 1);
               
-              // Check if we have a thumbnail from the server
-              if (result.thumbnailData) {
-                // Create a container for the video thumbnail and play button
-                const videoContainer = document.createElement("div");
-                videoContainer.className = "video-container";
-                
-                // Create the thumbnail image
-                const thumbnailImg = document.createElement("img");
-                thumbnailImg.src = `data:image/jpeg;base64,${result.thumbnailData}`;
-                thumbnailImg.alt = "Video Thumbnail";
-                thumbnailImg.className = "video-thumbnail";
-                
-                // Create the play button overlay
-                const playButton = document.createElement("div");
-                playButton.className = "play-button";
-                
-                // Add click handler to play the video
-                videoContainer.addEventListener("click", function() {
-                  // Create the video player with our custom function
-                  const playerContainer = createVideoPlayer(result.url, fileInfoDiv, fileItem, result.processingNote);
-                  
-                  // Replace the container with the player
-                  videoContainer.parentNode.replaceChild(playerContainer, videoContainer);
-                  
-                  // Find the video element and play it
-                  const video = playerContainer.querySelector('video');
-                  if (video) {
-                    video.play().catch(e => console.error("Error playing video:", e));
-                  }
-                });
-                
-                // Assemble the container
-                videoContainer.appendChild(thumbnailImg);
-                videoContainer.appendChild(playButton);
-                fileItem.appendChild(videoContainer);
-              } else if (result.url.endsWith('.mp4')) {
-                // Create video player with our custom function
-                createVideoPlayer(result.url, fileInfoDiv, fileItem, result.processingNote);
-              } else if (result.url.endsWith('.webp') || result.url.endsWith('.jpg') || result.url.endsWith('.png')) {
-                const img = document.createElement("img");
-                img.src = result.url;
-                img.alt = "Processed Image";
-                img.className = "preview-image";
-                img.onerror = function() {
-                  this.onerror = null;
-                  this.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5OTkiPkltYWdlIGxvYWQgZXJyb3I8L3RleHQ+PC9zdmc+";
-                  fileInfoDiv.innerHTML += `<p class="error">Error loading image. <a href="${result.url}" target="_blank">Try direct link</a></p>`;
-                };
-                fileItem.appendChild(img);
+              const fileInfoDiv = fileItem.querySelector(".file-links");
+              if (fileInfoDiv) {
+                fileInfoDiv.innerHTML = `<a href="${result.url}" target="_blank">View Processed File</a>`;
+                if (result.originalUrl) {
+                  fileInfoDiv.innerHTML += `<a href="${result.originalUrl}" target="_blank">View Original File</a>`;
+                }
+              }
+              
+              if (result.url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                const existingImg = fileItem.querySelector("img:not(.retry-button)");
+                if (existingImg) {
+                  existingImg.src = result.url;
+                } else {
+                  const img = document.createElement("img");
+                  img.src = result.url;
+                  img.className = "preview-image";
+                  fileItem.appendChild(img);
+                }
+              }
+              
+              if (result.url.match(/\.(mp4|webm|ogg)$/i)) {
+                const existingPlayer = fileItem.querySelector(".custom-video-player");
+                if (existingPlayer) fileItem.removeChild(existingPlayer);
+                createVideoPlayer(result.url, fileInfoDiv, fileItem);
               }
             } else {
               statusElement.textContent = "Retry Failed: " + (result.error || "Unknown error");
-              statusElement.classList.remove("processing");
-              statusElement.classList.add("error");
             }
           })
-          .catch((error) => {
+          .catch(error => {
             console.error("Retry error:", error);
             document.getElementById("debugInfo").textContent = "Error: " + error.message;
             
             const statusElement = fileItem.querySelector(".file-status");
             statusElement.textContent = "Retry Failed: " + error.message;
-            statusElement.classList.remove("processing");
-            statusElement.classList.add("error");
           });
       }
+      
+      // Function to retry all failed uploads
+      function retryAllFailed() {
+        if (failedUploads.length === 0) {
+          alert("No failed uploads to retry");
+          return;
+        }
+        
+        document.getElementById("debugInfo").textContent = `Retrying ${failedUploads.length} failed uploads...`;
+        [...failedUploads].forEach(item => retryProcessing(item.fileId, item.fileItem));
+      }
+
+      // Add event listener for the retry all button
+      document.getElementById("retryAllFailed").addEventListener("click", retryAllFailed);
     </script>
   </body>
 </html>

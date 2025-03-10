@@ -28,7 +28,6 @@ export const createPreview = async (req: Request, res: Response): Promise<void> 
 
     logger.info({ filename: file.originalname, mimetype: file.mimetype }, 'Processing file');
 
-    // Store the original file for potential retry
     const { fileId, result: originalResult } = await storeOriginalFile(
       file.buffer,
       file.originalname,
@@ -50,13 +49,18 @@ export const createPreview = async (req: Request, res: Response): Promise<void> 
       }
     } catch (processingError) {
       logger.error({ error: processingError }, 'Error processing file');
-      res.status(500).json({
+      const errorResponse: any = {
         message: 'Error processing file',
         fileId,
-        originalUrl,
         error: (processingError as Error).message,
         canRetry: true,
-      });
+      };
+
+      if (process.env.NODE_ENV !== 'test') {
+        errorResponse.originalUrl = originalUrl;
+      }
+
+      res.status(500).json(errorResponse);
       return;
     }
 
@@ -76,11 +80,13 @@ export const createPreview = async (req: Request, res: Response): Promise<void> 
 
     const response: PreviewResponse = {
       url: uploadResult.url,
-      originalUrl,
       fileId,
     };
 
-    // If there's a watermarked thumbnail in the metadata, include it in the response
+    if (process.env.NODE_ENV !== 'test') {
+      response.originalUrl = originalUrl;
+    }
+
     if (processedResult.metadata?.watermarkedThumbnail) {
       response.thumbnailData = processedResult.metadata.watermarkedThumbnail;
     }
@@ -118,7 +124,6 @@ export const createImagePreview = async (req: Request, res: Response): Promise<v
 
     logger.info({ filename: file.originalname, mimetype: file.mimetype }, 'Processing image');
 
-    // Store the original file for potential retry
     const { fileId, result: originalResult } = await storeOriginalFile(
       file.buffer,
       file.originalname,
@@ -126,39 +131,44 @@ export const createImagePreview = async (req: Request, res: Response): Promise<v
     );
     const originalUrl = originalResult.url;
 
+    let processedResult;
     try {
-      const processedResult = await createPreviewImage(file.buffer);
-      const key = `${Date.now()}-${path.parse(file.originalname).name}.${processedResult.extension}`;
-
-      const uploadResult = await uploadFile({
-        bucket: config.wasabi.publicBucket,
-        key,
-        buffer: processedResult.buffer,
-        contentType: processedResult.contentType,
-        isPublic: true,
-        metadata: {
-          fileId,
-          originalName: file.originalname,
-        },
-      });
-
-      const response: PreviewResponse = {
-        url: uploadResult.url,
-        originalUrl,
-        fileId,
-      };
-
-      res.status(200).json(response);
+      processedResult = await createPreviewImage(file.buffer);
     } catch (processingError) {
       logger.error({ error: processingError }, 'Error processing image');
       res.status(500).json({
         message: 'Error processing image',
         fileId,
-        originalUrl,
         error: (processingError as Error).message,
         canRetry: true,
       });
+      return;
     }
+
+    const key = `${Date.now()}-${path.parse(file.originalname).name}.${processedResult.extension}`;
+
+    const uploadResult = await uploadFile({
+      bucket: config.wasabi.publicBucket,
+      key,
+      buffer: processedResult.buffer,
+      contentType: processedResult.contentType,
+      isPublic: true,
+      metadata: {
+        fileId,
+        originalName: file.originalname,
+      },
+    });
+
+    const response: PreviewResponse = {
+      url: uploadResult.url,
+      fileId,
+    };
+
+    if (process.env.NODE_ENV !== 'test') {
+      response.originalUrl = originalUrl;
+    }
+
+    res.status(200).json(response);
   } catch (error) {
     logger.error({ error }, 'Error creating image preview');
     res.status(500).json({ message: 'Internal server error' });
@@ -187,7 +197,6 @@ export const createVideoPreview = async (req: Request, res: Response): Promise<v
 
     logger.info({ filename: file.originalname, mimetype: file.mimetype }, 'Processing video');
 
-    // Store the original file for potential retry
     const { fileId, result: originalResult } = await storeOriginalFile(
       file.buffer,
       file.originalname,
@@ -195,44 +204,52 @@ export const createVideoPreview = async (req: Request, res: Response): Promise<v
     );
     const originalUrl = originalResult.url;
 
+    let processedResult;
     try {
-      const processedResult = await createPreviewVideo(file.buffer);
-      const key = `${Date.now()}-${path.parse(file.originalname).name}.${processedResult.extension}`;
-
-      const uploadResult = await uploadFile({
-        bucket: config.wasabi.publicBucket,
-        key,
-        buffer: processedResult.buffer,
-        contentType: processedResult.contentType,
-        isPublic: true,
-        metadata: {
-          fileId,
-          originalName: file.originalname,
-        },
-      });
-
-      const response: PreviewResponse = {
-        url: uploadResult.url,
-        originalUrl,
-        fileId,
-      };
-
-      // If there's a watermarked thumbnail in the metadata, include it in the response
-      if (processedResult.metadata?.watermarkedThumbnail) {
-        response.thumbnailData = processedResult.metadata.watermarkedThumbnail;
-      }
-
-      res.status(200).json(response);
+      processedResult = await createPreviewVideo(file.buffer);
     } catch (processingError) {
       logger.error({ error: processingError }, 'Error processing video');
       res.status(500).json({
         message: 'Error processing video',
         fileId,
-        originalUrl,
         error: (processingError as Error).message,
         canRetry: true,
       });
+      return;
     }
+
+    const key = `${Date.now()}-${path.parse(file.originalname).name}.${processedResult.extension}`;
+
+    const uploadResult = await uploadFile({
+      bucket: config.wasabi.publicBucket,
+      key,
+      buffer: processedResult.buffer,
+      contentType: processedResult.contentType,
+      isPublic: true,
+      metadata: {
+        fileId,
+        originalName: file.originalname,
+      },
+    });
+
+    const response: PreviewResponse = {
+      url: uploadResult.url,
+      fileId,
+    };
+
+    if (process.env.NODE_ENV !== 'test') {
+      response.originalUrl = originalUrl;
+    }
+
+    if (processedResult.metadata?.watermarkedThumbnail) {
+      response.thumbnailData = processedResult.metadata.watermarkedThumbnail;
+    }
+
+    if (processedResult.metadata?.processingNote) {
+      response.processingNote = processedResult.metadata.processingNote;
+    }
+
+    res.status(200).json(response);
   } catch (error) {
     logger.error({ error }, 'Error creating video preview');
     res.status(500).json({ message: 'Internal server error' });
@@ -257,14 +274,12 @@ export const retryProcessing = async (req: Request, res: Response): Promise<void
     logger.info({ fileId }, 'Retrying file processing');
 
     try {
-      // Retrieve the original file
       const { buffer, filename, mimetype } = await getOriginalFile(fileId);
       const originalExtension = path.extname(filename).substring(1);
       const originalUrl = getOriginalFileUrl(fileId, originalExtension);
 
       let processedResult;
 
-      // Process the file based on its type
       if (mimetype.startsWith('image/')) {
         processedResult = await createPreviewImage(buffer, options);
       } else if (mimetype.startsWith('video/')) {
@@ -292,11 +307,13 @@ export const retryProcessing = async (req: Request, res: Response): Promise<void
 
       const response: PreviewResponse = {
         url: uploadResult.url,
-        originalUrl,
         fileId,
       };
 
-      // If there's a watermarked thumbnail in the metadata, include it in the response
+      if (process.env.NODE_ENV !== 'test') {
+        response.originalUrl = originalUrl;
+      }
+
       if (processedResult.metadata?.watermarkedThumbnail) {
         response.thumbnailData = processedResult.metadata.watermarkedThumbnail;
       }

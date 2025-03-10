@@ -1,4 +1,10 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, ObjectCannedACL } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  ObjectCannedACL,
+  ListObjectsCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config } from '../config/config';
 import { StorageOptions, StorageResult } from '../types';
@@ -51,7 +57,7 @@ export const uploadFile = async (options: StorageOptions): Promise<StorageResult
     return { url: fileUrl, key };
   } catch (error) {
     logger.error({ error }, 'Error uploading file to Wasabi');
-    throw new Error(`Failed to upload file: ${(error as Error).message}`);
+    throw error;
   }
 };
 
@@ -69,7 +75,7 @@ export const storeOriginalFile = async (
 ): Promise<{ fileId: string; result: StorageResult }> => {
   try {
     const fileId = uuidv4();
-    const extension = filename.split('.').pop() || '';
+    const extension = filename.split('.').pop() || 'bin';
     const key = `originals/${fileId}.${extension}`;
 
     logger.debug({ fileId, filename }, 'Storing original file');
@@ -79,12 +85,10 @@ export const storeOriginalFile = async (
       key,
       buffer,
       contentType: mimetype,
-      isPublic: true,
+      isPublic: false,
       metadata: {
-        fileId,
         originalName: filename,
         originalMimetype: mimetype,
-        storedAt: new Date().toISOString(),
       },
     });
 
@@ -93,7 +97,7 @@ export const storeOriginalFile = async (
     return { fileId, result };
   } catch (error) {
     logger.error({ error }, 'Error storing original file');
-    throw new Error(`Failed to store original file: ${(error as Error).message}`);
+    throw error;
   }
 };
 
@@ -108,32 +112,44 @@ export const getOriginalFile = async (
   try {
     logger.debug({ fileId }, 'Retrieving original file');
 
-    // Find the file by listing objects with prefix and filtering by metadata
-    // For simplicity, we'll assume the key format is known
-    const key = `originals/${fileId}`;
+    const files = await s3Client.send(
+      new ListObjectsCommand({
+        Bucket: config.wasabi.privateBucket,
+        Prefix: `originals/${fileId}`,
+      }),
+    );
 
-    const command = new GetObjectCommand({
-      Bucket: config.wasabi.privateBucket,
-      Key: key,
-    });
-
-    const response = await s3Client.send(command);
-
-    if (!response.Body) {
-      throw new Error('File body is empty');
+    if (!files.Contents || files.Contents.length === 0) {
+      throw new Error(`Original file not found for ID: ${fileId}`);
     }
 
-    const buffer = await streamToBuffer(response.Body);
-    const metadata = response.Metadata || {};
-    const filename = metadata.originalname || 'unknown';
-    const mimetype = metadata.originalmimetype || 'application/octet-stream';
+    const fileKey = files.Contents[0].Key;
+    if (!fileKey) {
+      throw new Error(`Original file key not found for ID: ${fileId}`);
+    }
+
+    const fileObj = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: config.wasabi.privateBucket,
+        Key: fileKey,
+      }),
+    );
+
+    if (!fileObj.Body) {
+      throw new Error(`Original file body not found for ID: ${fileId}`);
+    }
+
+    const buffer = await streamToBuffer(fileObj.Body);
+    const filename = fileObj.Metadata?.originalName || `${fileId}.bin`;
+    const mimetype =
+      fileObj.Metadata?.originalMimetype || fileObj.ContentType || 'application/octet-stream';
 
     logger.info({ fileId, filename }, 'Original file retrieved successfully');
 
     return { buffer, filename, mimetype };
   } catch (error) {
     logger.error({ error, fileId }, 'Error retrieving original file');
-    throw new Error(`Failed to retrieve original file: ${(error as Error).message}`);
+    throw error;
   }
 };
 

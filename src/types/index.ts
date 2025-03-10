@@ -73,7 +73,7 @@ export interface RetryProcessingRequest {
  */
 export interface PreviewResponse {
   url: string;
-  originalUrl: string;
+  originalUrl?: string;
   fileId: string;
   thumbnailData?: string;
   processingNote?: string;
